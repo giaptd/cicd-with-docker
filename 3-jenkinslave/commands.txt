@@ -1,3 +1,3 @@
 docker build --build-arg BASE_URL=http://172.16.10.37:8080 -t gtd-jenkins_windows_agent .
 
-docker run -ti gtd-jenkins_windows_agent -jnlpUrl http://172.16.10.37:8080/computer/dotnet-slave-docker/slave-agent.jnlp -secret e10c1243d7af73f48d543ac97f750fec0738dd503610d40032266cd567667c06
+docker run -ti --name jenkins-slave --rm zappa/gtd-jenkins_windows_agent -jnlpUrl http://172.16.10.37:8080/computer/dotnet-slave-docker/slave-agent.jnlp -secret e10c1243d7af73f48d543ac97f750fec0738dd503610d40032266cd567667c06
