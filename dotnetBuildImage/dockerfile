@@ -1,0 +1,46 @@
+FROM microsoft/dotnet-framework
+
+SHELL ["powershell"]
+# Note: Add .NET + ASP.NET
+RUN \
+    Install-PackageProvider -Name chocolatey -RequiredVersion 2.8.5.130 -Force;\
+    Install-WindowsFeature NET-Framework-45-ASPNET ; \
+    Install-WindowsFeature Web-Asp-Net45;\
+    Install-Package -Name webdeploy -RequiredVersion 3.5.2 -Force;\
+    Install-Package -Name netfx-4.6.1-devpack -Force;\
+    cd /
+
+# Note: Get MSBuild 14.
+RUN \
+    Invoke-WebRequest "https://download.microsoft.com/download/E/E/D/EEDF18A8-4AED-4CE0-BEBE-70A83094FC5A/BuildTools_Full.exe" -OutFile "$env:TEMP\BuildTools_Full.exe" -UseBasicParsing; \
+    Start-Process -FilePath "$env:TEMP\BuildTools_Full.exe" -ArgumentList '/Passive', '/NoRestart' -PassThru | Wait-Process; \
+    cd /
+# Note: Add NuGet
+RUN \
+    New-Item -ItemType Directory -Force -Path 'c:/nuget'; \
+    Invoke-WebRequest "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -OutFile "c:/nuget/nuget.exe" -UseBasicParsing;\
+    cd /
+# Note: Install Web Targets v14
+RUN \
+    New-Item -ItemType Directory -Force -Path 'c:/Program Files (x86)/MSBuild/Microsoft/VisualStudio/v14.0'; \
+    cd 'c:/Program Files (x86)/MSBuild/Microsoft/VisualStudio/v14.0'; \
+    & "c:/nuget/nuget.exe" Install MSBuild.Microsoft.VisualStudio.Web.targets -Version 14.0.0.3 ; \
+    mv 'c:/Program Files (x86)/MSBuild/Microsoft/VisualStudio/v14.0/MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0.3/tools/VSToolsPath/*' 'c:/Program Files (x86)/MSBuild/Microsoft/VisualStudio/v14.0/'; \
+    # TODO: refactor with docker ENV after 1.4 release. 
+    $env:PATH = '{0};{1}' -f $env:PATH, 'c:/Program Files (x86)/MSBuild/14.0/Bin/msbuild.exe'; \
+        [Environment]::SetEnvironmentVariable('PATH', $env:PATH, 'Machine'); \
+    cd /
+
+# Note: Install Git & chocolatey
+RUN \
+    # TODO: refactor with docker ENV after 1.4 release. 
+    if (-not($env:GIT_VERSION)) { $env:GIT_VERSION = '2.12.2'; \
+        [Environment]::SetEnvironmentVariable('GIT_VERSION', $env:GIT_VERSION, 'Machine') }; \
+    New-Item -ItemType Directory -Force -Path 'c:/git'; \
+    Invoke-WebRequest "https://github.com/git-for-windows/git/releases/download/v$env:GIT_VERSION.windows.1/Git-$env:GIT_VERSION-64-bit.exe" -OutFile "$env:TEMP/git.exe" -UseBasicParsing; \
+    Start-Process -FilePath "$env:TEMP/git.exe" -ArgumentList '/VERYSILENT', '/NORESTART', '/NOCANCEL', '/SP-', '/DIR="c:/git"' -PassThru | Wait-Process; \
+    dir "$env:TEMP" | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue;\
+	cd /
+# Chocolatey
+
+ENTRYPOINT ["powershell"]
