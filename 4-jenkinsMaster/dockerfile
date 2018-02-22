@@ -1,0 +1,10 @@
+FROM openjdk:windowsservercore
+
+ENV HOME /jenkins
+RUN mkdir \jenkins
+RUN powershell -Command "wget -Uri https://updates.jenkins-ci.org/latest/jenkins.war -UseBasicParsing -OutFile /jenkins/jenkins.war"
+
+EXPOSE 8080
+EXPOSE 50000
+
+CMD java -jar C:\\jenkins\\jenkins.war
